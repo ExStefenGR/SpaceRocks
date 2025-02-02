@@ -1,7 +1,5 @@
 #
-# Spacerocks.mak
-#
-# tilemap text via tonclib
+# Tilemap text via tonclib.
 #
 # NOTE: for educational purposes only. For real work, use 
 # devkitPro's templates ( $(DEVKITPRO)/examples/gba/template )
@@ -14,31 +12,31 @@ PATH := $(DEVKITARM)/bin:$(PATH)
 PROJ    := main
 TITLE   := $(PROJ)
 
-LIBTONC	:= ../../tonclib
+# Use absolute paths based on DEVKITPRO.
+LIBTONC := $(DEVKITPRO)/libtonc
+LIBGBA  := $(DEVKITPRO)/libgba
 
-INCLUDE  := -I$(LIBTONC)/include
+# Include both libgba and libtonc headers.
+INCLUDE  := -I$(LIBGBA)/include -I$(LIBTONC)/include
 LIBPATHS := -L$(LIBTONC)/lib
 
 LIBS    := -ltonc
 
-COBJS   := $(PROJ).o mainMenu.o playButton.o game.o playerSprite.o gameOverScreen.o pauseMenu.o enemySprite.o shoot.o healthBar0.o healthBar1.o healthBar2.o healthBar3.o enemySpriteExploding.o enemySpriteExploding2.o enemySpriteExploding3.o enemySpriteExploding4.o healthPowerUp.o speedPowerUp.o bulletPowerUp.o
+# List all C source object files (the file main.c produces main.o, etc.)
+COBJS   := main.o mainMenu.o playButton.o game.o playerSprite.o gameOverScreen.o pauseMenu.o enemySprite.o shoot.o healthBar0.o healthBar1.o healthBar2.o healthBar3.o enemySpriteExploding.o enemySpriteExploding2.o enemySpriteExploding3.o enemySpriteExploding4.o healthPowerUp.o bulletPowerUp.o
 
 OBJS    := $(COBJS)
 
-# --- boot type (MB=0 : normal. MB=1 : multiboot) ---
+# --- Boot type (MB=0: normal; MB=1: multiboot) -------------------------
 
 MB = 0
 
 ifeq ($(MB),1)
-
 TARGET	:= $(PROJ).mb
 SPECS	:= -specs=gba_mb.specs
-
 else
-
 TARGET	:= $(PROJ)
 SPECS	:= -specs=gba.specs
-
 endif
 
 # --- Compiling -------------------------------------------------------
@@ -49,33 +47,32 @@ CC		:= $(CROSS)gcc
 LD		:= $(CROSS)gcc
 OBJCOPY	:= $(CROSS)objcopy
 
-
 ARCH	:= -mthumb-interwork -mthumb
 
 ASFLAGS	:= -mthumb-interwork
 CFLAGS	:= $(ARCH) $(INCLUDE) -O2 -Wall -fno-strict-aliasing
 LDFLAGS	:= $(ARCH) $(SPECS) $(LIBPATHS) $(LIBS) -Wl,-Map,$(PROJ).map
 
-.PHONY : build clean
+.PHONY: build clean
 
 # --- Build -----------------------------------------------------------
 
-build : $(TARGET).gba
+build: $(TARGET).gba
 
-
-$(TARGET).gba : $(TARGET).elf
+$(TARGET).gba: $(TARGET).elf
 	$(OBJCOPY) -v -O binary $< $@
-	-@gbafix $@ -t$(TITLE)
+#	-@gbafix $@ -t$(TITLE)
 
-$(TARGET).elf : $(OBJS)
-	$(LD) $^ $(LDFLAGS) -o $@
+$(TARGET).elf: $(OBJS)
+	$(LD) $(OBJS) $(LDFLAGS) -o $@
 
-$(COBJS) : %.o : %.c
+# Standard pattern rule to compile .c files into .o files.
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-	
+
 # --- Clean -----------------------------------------------------------
 
-clean : 
+clean:
 	@rm -fv *.gba
 	@rm -fv *.elf
 	@rm -fv *.o
