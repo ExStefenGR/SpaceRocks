@@ -111,6 +111,16 @@ void powerUpUpdate(void);
 void killPowerUp(int i);
 
 // -----------------------------------------------------------------
+// Added: Clear unused OAM entries
+// -----------------------------------------------------------------
+void clear_unused_oam(void)
+{
+    // Only indices 0 to 25 are used; hide the rest.
+    for (int i = 26; i < 128; i++)
+        obj_hide(&obj_buffer[i]);
+}
+
+// -----------------------------------------------------------------
 // Main Function
 // -----------------------------------------------------------------
 int main(void)
@@ -119,10 +129,9 @@ int main(void)
     srand(time(NULL));
 
     // Initialise main menu assets
-	dma3_cpy(pal_bg_mem, mainMenuPal, mainMenuPalLen);
-	dma3_cpy(&tile_mem[0][0], mainMenuTiles, mainMenuTilesLen);
-	dma3_cpy(&se_mem[30][0], mainMenuMap, mainMenuMapLen);
-
+    dma3_cpy(pal_bg_mem, mainMenuPal, mainMenuPalLen);
+    dma3_cpy(&tile_mem[0][0], mainMenuTiles, mainMenuTilesLen);
+    dma3_cpy(&se_mem[30][0], mainMenuMap, mainMenuMapLen);
 
     // Load sprites into video memory
     dma3_cpy(&tile_mem[4][0], playButtonTiles, playButtonTilesLen);
@@ -135,14 +144,14 @@ int main(void)
     dma3_cpy(pal_obj_mem, shootPal, shootPalLen);
 
     // Healthbar tiles
-	dma3_cpy(&tile_mem[4][48], healthBar0Tiles, healthBar0TilesLen);
-	dma3_cpy(pal_obj_mem, healthBar0Pal, healthBar0PalLen);
-	dma3_cpy(&tile_mem[4][80], healthBar1Tiles, healthBar1TilesLen);
-	dma3_cpy(pal_obj_mem, healthBar1Pal, healthBar1PalLen);
-	dma3_cpy(&tile_mem[4][112], healthBar2Tiles, healthBar2TilesLen);
-	dma3_cpy(pal_obj_mem, healthBar2Pal, healthBar2PalLen);
-	dma3_cpy(&tile_mem[4][144], healthBar3Tiles, healthBar3TilesLen);
-	dma3_cpy(pal_obj_mem, healthBar3Pal, healthBar3PalLen);
+    dma3_cpy(&tile_mem[4][48], healthBar0Tiles, healthBar0TilesLen);
+    dma3_cpy(pal_obj_mem, healthBar0Pal, healthBar0PalLen);
+    dma3_cpy(&tile_mem[4][80], healthBar1Tiles, healthBar1TilesLen);
+    dma3_cpy(pal_obj_mem, healthBar1Pal, healthBar1PalLen);
+    dma3_cpy(&tile_mem[4][112], healthBar2Tiles, healthBar2TilesLen);
+    dma3_cpy(pal_obj_mem, healthBar2Pal, healthBar2PalLen);
+    dma3_cpy(&tile_mem[4][144], healthBar3Tiles, healthBar3TilesLen);
+    dma3_cpy(pal_obj_mem, healthBar3Pal, healthBar3PalLen);
 
     // Enemy explosion animations
     dma3_cpy(&tile_mem[4][176], enemySpriteExplodingTiles, enemySpriteExplodingTilesLen);
@@ -196,7 +205,8 @@ int main(void)
             default:
                 return 0;
         }
-        // Update OAM once per frame
+        // Hide unused OAM entries before updating the hardware OAM
+        clear_unused_oam();
         oam_copy(oam_mem, obj_buffer, 128);
     }
     return 0;
@@ -490,25 +500,25 @@ void init(void)
     player.sprite->attr2 = ATTR2_BUILD(player.tid, player.pb, 0);
 
     // Initialise Enemies
-	for (i = 0; i < NUM_ENEMIES; i++)
-	{
-		enemies[i].spawnTimer = -10;
-		enemies[i].explosionTimer = 20;
-		enemies[i].isExploding = false;
-		enemies[i].state = rand() % BEHAVIOUR;
-		enemies[i].posX = 160 + i * 15;
-		enemies[i].posY = i * 35;
-		enemies[i].goingDown = true;
-		enemies[i].sprite = &obj_buffer[2 + i];
-		enemies[i].tid = 36;
-		enemies[i].pb = i;
-		enemies[i].eDead = false;
-		enemies[i].speed = 1;
-		obj_set_attr(enemies[i].sprite, ATTR0_SQUARE, ATTR1_SIZE_16,
-					ATTR2_PALBANK(enemies[i].pb) | enemies[i].tid);
-		enemies[i].sprite->attr2 = ATTR2_BUILD(enemies[i].tid, enemies[i].pb, 0);
-		obj_set_pos(enemies[i].sprite, enemies[i].posX, enemies[i].posY);
-	}
+    for (i = 0; i < NUM_ENEMIES; i++)
+    {
+        enemies[i].spawnTimer = -10;
+        enemies[i].explosionTimer = 20;
+        enemies[i].isExploding = false;
+        enemies[i].state = rand() % BEHAVIOUR;
+        enemies[i].posX = 160 + i * 15;
+        enemies[i].posY = i * 35;
+        enemies[i].goingDown = true;
+        enemies[i].sprite = &obj_buffer[2 + i];
+        enemies[i].tid = 36;
+        enemies[i].pb = i;
+        enemies[i].eDead = false;
+        enemies[i].speed = 1;
+        obj_set_attr(enemies[i].sprite, ATTR0_SQUARE, ATTR1_SIZE_16,
+                     ATTR2_PALBANK(enemies[i].pb) | enemies[i].tid);
+        enemies[i].sprite->attr2 = ATTR2_BUILD(enemies[i].tid, enemies[i].pb, 0);
+        obj_set_pos(enemies[i].sprite, enemies[i].posX, enemies[i].posY);
+    }
 
     // Initialise Bullets
     for (int b = 0; b < NUM_PBULLETS; b++)
@@ -589,7 +599,6 @@ void killEnemy(int i)
 
 void obj_enemy(void)
 {
-    int posY = rand() % 140;
     for (int i = 0; i < NUM_ENEMIES; i++)
     {
         enemies[i].spawnTimer--;
@@ -597,7 +606,7 @@ void obj_enemy(void)
         {
             enemies[i].tid = 36;
             enemies[i].posX = 240;
-            enemies[i].posY = posY;
+            enemies[i].posY = rand() % 140;
             enemies[i].eDead = false;
             enemies[i].isExploding = false;
             enemies[i].pb = i;
@@ -605,6 +614,7 @@ void obj_enemy(void)
         }
         if (enemies[i].spawnTimer < -10)
             enemies[i].spawnTimer = -10;
+        // Explosion animation update
         if (enemies[i].isExploding)
         {
             enemies[i].explosionTimer--;
